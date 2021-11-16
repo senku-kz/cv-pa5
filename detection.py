@@ -1,5 +1,5 @@
 ##Credit: Juan Carlos Niebles and Ranjay Krishna
-    
+
 import numpy as np
 from skimage import feature, data, color, exposure, io
 from skimage.transform import rescale, resize, downscale_local_mean
@@ -9,7 +9,7 @@ from scipy.ndimage import interpolation
 import math
 
 
-def hog_feature(image, pixel_per_cell = 8):
+def hog_feature(image, pixel_per_cell=8):
     ''' 
     Compute hog feature for a given image.
     Hint: use the hog function provided by skimage
@@ -23,7 +23,8 @@ def hog_feature(image, pixel_per_cell = 8):
     #####################################
     #       START YOUR CODE HERE        #
     #####################################   
-    pass
+    hogFeature, hogImage = feature.hog(image, block_norm='L1', pixels_per_cell=(pixel_per_cell, pixel_per_cell),
+                                       visualize=True)
     ######################################
     #        END OF YOUR CODE            #
     ######################################
@@ -49,22 +50,31 @@ def sliding_window(image, base_score, stepSize, windowSize, pixel_per_cell=8):
         response_map: an np array of size (h,w)
     '''
     # slide a window across the image
-    (max_score, maxr, maxc) = (0,0,0)
+    (max_score, maxr, maxc) = (0, 0, 0)
     winH, winW = windowSize
-    H,W = image.shape
-    pad_image = np.lib.pad(image, ((winH//2,winH-winH//2),(winW//2, winW-winW//2)), mode='constant')
-    response_map = np.zeros((H//stepSize+1, W//stepSize+1))
-    
+    H, W = image.shape
+    pad_image = np.lib.pad(image, ((winH // 2, winH - winH // 2), (winW // 2, winW - winW // 2)), mode='constant')
+    response_map = np.zeros((H // stepSize + 1, W // stepSize + 1))
+
     #####################################
     #       START YOUR CODE HERE        #
     #####################################
-    pass
-
+    for i in range(response_map.shape[0]):
+        for j in range(response_map.shape[1]):
+            crop_window = pad_image[i * stepSize:i * stepSize + winH, j * stepSize: j * stepSize + winW]
+            crop_hog_feature, _ = hog_feature(crop_window, pixel_per_cell)
+            # print(crop_hog_feature.shape)
+            response_map[i, j] = np.sum(crop_hog_feature * base_score)
+    # response_map2 = resize(response_map, output_shape=[H, W])
+    response_map = resize(response_map, output_shape=[H, W])
+    maxr, maxc = np.unravel_index(np.argmax(response_map), response_map.shape)
+    max_score = response_map[maxr][maxc]
+    maxr -= winH // 2
+    maxc -= winW // 2
     ######################################
     #        END OF YOUR CODE            #
     ######################################
-    
-    
+
     return (max_score, maxr, maxc, response_map)
 
 
@@ -92,13 +102,24 @@ def pyramid(image, scale=0.9, minSize=(200, 100)):
     #####################################
     #       START YOUR CODE HERE        #
     #####################################
-    pass
+    while True:
+        H, W = image.shape
+        if H * scale < minSize[0] or W * scale < minSize[1]:
+            break
+
+        # Compute the new dimensions of the image and resize it
+        current_scale *= scale
+        image = rescale(image, scale)
+
+        # Yield the next image in the pyramid
+        images.append((current_scale, image))
     ######################################
     #        END OF YOUR CODE            #
     ######################################
     return images
 
-def pyramid_score(image,base_score, shape, stepSize=20, scale = 0.9, pixel_per_cell = 8):
+
+def pyramid_score(image, base_score, shape, stepSize=20, scale=0.9, pixel_per_cell=8):
     '''
     Calculate the maximum score found in the image pyramid using sliding window.
     
@@ -118,20 +139,20 @@ def pyramid_score(image,base_score, shape, stepSize=20, scale = 0.9, pixel_per_c
     maxr = 0
     maxc = 0
     max_scale = 1.0
-    max_response_map =np.zeros(image.shape)
+    max_response_map = np.zeros(image.shape)
     images = pyramid(image, scale)
     #####################################
     #       START YOUR CODE HERE        #
     #####################################
-    pass
+    for scale, image in images:
+        score, r, c, response_map = sliding_window(image, base_score, stepSize, shape, pixel_per_cell)
+        if score > max_score:
+            max_score = score
+            maxr = r
+            maxc = c
+            max_scale = scale
+            max_response_map = response_map
     ######################################
     #        END OF YOUR CODE            #
     ######################################
     return max_score, maxr, maxc, max_scale, max_response_map
-
-
-
-
-            
-
-    
