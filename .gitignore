@@ -1,3 +1,9 @@
+.idea/
+.ipynb_checkpoints/
+__pycache__/
+delete/
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
